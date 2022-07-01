@@ -151,3 +151,43 @@ class NumChannel(APIView):
             print(serializer)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.error,status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class NumChannelChart(APIView):
+    def computeRecursive (self, n,load, pn_1):
+        return (load * pn_1) / (n + load * pn_1)
+
+    def findMinServers(self,load, blockingProb):
+        if (blockingProb == 1.0) or (load == 0.0):
+            return 0
+        pn = 1.0
+        n = 0
+        while (pn > blockingProb):
+            n = n + 1
+            pn = self.computeRecursive(n, load, pn)
+        return n
+    
+    def calculate_numChannel(self, prob,load):
+        answer  = self.findMinServers(load,prob)
+        return answer
+
+    def post(self, request):
+        data = json.loads(request.body.decode('utf-8'))
+        
+        body = []
+        for item in data:
+            prob = float(item.get("prob"))
+            load = float(item.get("offer_load"))
+
+            channel = self.calculate_numChannel(prob,load)
+            answer = {
+                "prob":prob,
+                "offerLoad":load,
+                "number_channel":channel
+            }
+            body.append(answer)
+
+        if(len(body)):
+            return Response(body, status=status.HTTP_200_OK)
+        return Response({"error occured"},status=status.HTTP_400_BAD_REQUEST)
